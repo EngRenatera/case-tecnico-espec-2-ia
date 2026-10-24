@@ -247,8 +247,8 @@ Se o 7B passar de cerca de 30 segundos para uma frase curta, troque `LLM_MODEL` 
 
 **Fazer.**
 
-- `catalogo/ciclo-15.md` com cerca de 25 produtos, marcas Boticário e Eudora, preço de tabela, e regras de promoção. Incluir o Malbec Gold como "últimas unidades".
-- Script que gera o PDF a partir desse Markdown.
+- `catalogo/ciclo-15.md` com 25 produtos, marcas Boticário e Eudora, preço de tabela e regras de promoção. O Malbec Gold entra como promoção de últimas unidades.
+- `scripts/gerar_catalogo_pdf.py` lê esse Markdown e grava `catalogo/ciclo-15.pdf`.
 - `app/rag.py`: lê o PDF com `pypdf`, corta em pedaços de cerca de 800 caracteres com sobreposição de 100, chama o embedding e grava em `catalogo_chunk`.
 - Uma função `buscar_catalogo(pergunta, k=4)` com a ordenação por distância do pgvector.
 
