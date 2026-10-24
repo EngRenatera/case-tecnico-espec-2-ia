@@ -2,6 +2,8 @@
 Case Técnico V3*.pdf
 
 .env
+.certs/
+docker-compose.override.yml
 .venv/
 __pycache__/
 .pytest_cache/

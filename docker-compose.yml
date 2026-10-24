@@ -1,6 +1,9 @@
-# Postgres do MVP. A porta do host é 5433 porque a máquina já tem
-# um Postgres local escutando em 5432. Dentro do container a porta
-# continua 5432. Os scripts em db/ só rodam quando o volume está vazio.
+# Postgres do MVP e o servidor de modelos.
+# A porta do Postgres no host é 5433 porque a máquina já escuta em 5432.
+# Dentro do container a porta continua 5432. Os scripts em db/ só rodam
+# quando o volume está vazio.
+# Ollama guarda os modelos no volume agentes_ollama. O pull não entra
+# na subida do container: rode `docker compose exec ollama ollama pull <modelo>`.
 services:
   postgres:
     image: pgvector/pgvector:pg16
@@ -22,5 +25,20 @@ services:
       retries: 12
       start_period: 10s
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: agentes-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - agentes_ollama:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
 volumes:
   agentes_pg:
+  agentes_ollama:

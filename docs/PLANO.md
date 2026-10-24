@@ -221,6 +221,7 @@ Resultado esperado: `0`.
 - Serviço `ollama` no compose, porta 11434, volume próprio.
 - Pull de `qwen2.5:7b-instruct` e de `nomic-embed-text`.
 - Variáveis `OLLAMA_BASE_URL`, `LLM_MODEL`, `EMBEDDING_MODEL` num `.env.example`.
+- Nesta máquina o pull só completa com o overlay `docker-compose.netskope.yml`. A inspeção TLS do Netskope reescreve o certificado, e o container não vê o bundle da máquina. O `docker-compose.override.yml` é cópia local desse overlay e fica fora do git.
 
 **Validar.**
 

@@ -1,0 +1,16 @@
+# Overlay para a rede com inspeção TLS do Netskope.
+# O compose base sobe em qualquer máquina. Este arquivo só entra onde
+# o proxy corporativo reescreve o certificado do registry do Ollama.
+#
+#   mkdir -p .certs
+#   cp /etc/netskope/certs/netskope-cert-bundle.pem .certs/
+#   cp docker-compose.netskope.yml docker-compose.override.yml
+#   docker compose up -d ollama
+#
+# O override é local e não vai para o git. O Compose o aplica sozinho.
+services:
+  ollama:
+    environment:
+      SSL_CERT_FILE: /certs/netskope-cert-bundle.pem
+    volumes:
+      - ./.certs/netskope-cert-bundle.pem:/certs/netskope-cert-bundle.pem:ro
