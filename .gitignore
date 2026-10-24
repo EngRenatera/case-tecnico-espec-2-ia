@@ -1,0 +1,9 @@
+# Material do processo seletivo — não versionar
+Case Técnico V3*.pdf
+
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.streamlit/secrets.toml
