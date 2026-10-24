@@ -1,5 +1,6 @@
 """Gera o PDF do Ciclo 15 a partir do Markdown versionado."""
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fpdf import FPDF
@@ -17,6 +18,7 @@ def gerar(origem: Path = MARKDOWN_PATH, destino: Path = PDF_PATH) -> Path:
         raise FileNotFoundError(f"Markdown do catálogo não encontrado em {origem}")
 
     pdf = FPDF()
+    pdf.set_creation_date(datetime(2026, 10, 24, 12, 0, tzinfo=timezone.utc))
     pdf.set_auto_page_break(auto=True, margin=18)
     pdf.add_font("DejaVu", "", str(FONTE))
     pdf.add_page()
