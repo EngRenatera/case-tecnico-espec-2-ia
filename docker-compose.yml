@@ -1,0 +1,26 @@
+# Postgres do MVP. A porta do host é 5433 porque a máquina já tem
+# um Postgres local escutando em 5432. Dentro do container a porta
+# continua 5432. Os scripts em db/ só rodam quando o volume está vazio.
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: agentes-postgres
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: agentes
+    ports:
+      - "5433:5432"
+    volumes:
+      - agentes_pg:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d agentes"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  agentes_pg:
