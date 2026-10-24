@@ -3,6 +3,9 @@
 Cada mensagem entra num state, o roteador escolhe uma aresta e o
 PostgresSaver grava o state na chave da sessão. O modelo classifica a
 intenção. O código chama a tool e guarda o pedido em foco.
+
+Antes do modelo, uma regra determinística pode recusar a frase. Depois
+do redator, a resposta inteira é mascarada e só então entra no histórico.
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from langgraph.graph.message import add_messages
 from pydantic import BaseModel, ValidationError
 from typing_extensions import TypedDict
 
+from app.guardrails import entrada_bloqueada, margem_da_sessao, mascarar_saida
 from app.rag import buscar_catalogo
 from app.tools import DATABASE_URL, consultar_estoque, consultar_minha_margem, consultar_pedidos
 
@@ -51,6 +55,7 @@ class Estado(TypedDict, total=False):
     trechos_catalogo: list[str]
     linhas_transacionais: list
     resposta: str
+    entrada_bloqueada: bool
 
 
 class IntencaoModelo(BaseModel):
@@ -125,6 +130,13 @@ def criar_grafo(
     checkpointer,
     buscar=buscar_catalogo,
 ):
+    def filtrar(state: Estado) -> dict:
+        mensagem = _ultima_mensagem(state)
+        limpeza = {"trechos_catalogo": [], "linhas_transacionais": []}
+        if entrada_bloqueada(mensagem, state["id_revendedora"]):
+            return {**limpeza, "intencao": "bloqueado", "entrada_bloqueada": True}
+        return {**limpeza, "entrada_bloqueada": False}
+
     def rotear(state: Estado) -> dict:
         mensagem = _ultima_mensagem(state)
         intencao: Intencao = "conversa"
@@ -135,6 +147,8 @@ def criar_grafo(
                 break
             except (ValidationError, ValueError, json.JSONDecodeError):
                 continue
+        if intencao == "bloqueado" and margem_da_sessao(mensagem):
+            intencao = "pedido"
         return {
             "intencao": intencao,
             "trechos_catalogo": [],
@@ -164,11 +178,19 @@ def criar_grafo(
 
     def no_redigir(state: Estado) -> dict:
         mensagem = _ultima_mensagem(state)
-        resposta = redigir(mensagem, _montar_contexto(state))
-        return {"resposta": resposta, "messages": [AIMessage(content=resposta)]}
+        return {"resposta": redigir(mensagem, _montar_contexto(state))}
 
     def no_recusar(state: Estado) -> dict:
-        return {"resposta": RECUSA, "messages": [AIMessage(content=RECUSA)]}
+        return {"resposta": RECUSA}
+
+    def no_mascarar(state: Estado) -> dict:
+        limpa = mascarar_saida(state.get("resposta", ""))
+        return {"resposta": limpa, "messages": [AIMessage(content=limpa)]}
+
+    def depois_do_filtro(state: Estado) -> str:
+        if state.get("entrada_bloqueada"):
+            return "recusar"
+        return "rotear"
 
     def depois_do_roteador(state: Estado) -> str:
         return {
@@ -185,17 +207,21 @@ def criar_grafo(
         return "redigir"
 
     grafo = StateGraph(Estado)
+    grafo.add_node("filtrar", filtrar)
     grafo.add_node("rotear", rotear)
     grafo.add_node("buscar_catalogo", no_catalogo)
     grafo.add_node("consultar_transacional", no_transacional)
     grafo.add_node("redigir", no_redigir)
     grafo.add_node("recusar", no_recusar)
-    grafo.add_edge(START, "rotear")
+    grafo.add_node("mascarar", no_mascarar)
+    grafo.add_edge(START, "filtrar")
+    grafo.add_conditional_edges("filtrar", depois_do_filtro)
     grafo.add_conditional_edges("rotear", depois_do_roteador)
     grafo.add_conditional_edges("buscar_catalogo", depois_do_catalogo)
     grafo.add_edge("consultar_transacional", "redigir")
-    grafo.add_edge("redigir", END)
-    grafo.add_edge("recusar", END)
+    grafo.add_edge("redigir", "mascarar")
+    grafo.add_edge("recusar", "mascarar")
+    grafo.add_edge("mascarar", END)
     return grafo.compile(checkpointer=checkpointer)
 
 
@@ -211,10 +237,12 @@ def classificar_ollama(mensagem: str) -> str:
                 "Responda só um JSON: "
                 '{"intencao":"catalogo"|"pedido"|"ambos"|"conversa"|"bloqueado"}. '
                 "catalogo: promoção, preço de tabela, descrição. "
-                "pedido: status, transportadora, estoque, margem própria, 'meu último pedido', 'dele'. "
+                "pedido: status, transportadora, estoque, ou a margem da própria revendedora. "
                 "ambos: promoção e estoque na mesma frase. "
-                "bloqueado: margem ou dado pessoal de outra pessoa. "
-                "conversa: saudação ou assunto fora disso.",
+                "bloqueado: margem de outra pessoa, ranking de margens, CPF, telefone ou e-mail. "
+                "conversa: saudação ou assunto fora disso. "
+                'Exemplo: "qual a minha margem?" -> {"intencao":"pedido"}. '
+                'Exemplo: "qual a margem da Maria?" -> {"intencao":"bloqueado"}.',
             ),
             ("human", mensagem),
         ]

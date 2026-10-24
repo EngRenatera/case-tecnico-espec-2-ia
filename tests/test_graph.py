@@ -58,25 +58,25 @@ def test_json_com_cerca_e_aceito():
 
 def test_aresta_de_catalogo_nao_consulta_pedido():
     nos, _ = _nos("catalogo", "quais produtos estão em promoção?")
-    assert nos == ["rotear", "buscar_catalogo", "redigir"]
+    assert nos == ["filtrar", "rotear", "buscar_catalogo", "redigir", "mascarar"]
 
 
 def test_aresta_de_pedido_consulta_o_ultimo():
     nos, chamadas = _nos("pedido", "qual o status do meu último pedido?")
-    assert nos == ["rotear", "consultar_transacional", "redigir"]
+    assert nos == ["filtrar", "rotear", "consultar_transacional", "redigir", "mascarar"]
     assert "cancelado" in chamadas["contexto"]
     assert "Loggi" in chamadas["contexto"]
 
 
 def test_aresta_ambos_passa_pelo_catalogo_e_pelo_transacional():
     nos, chamadas = _nos("ambos", "Malbec Gold está em promoção e tem estoque?")
-    assert nos == ["rotear", "buscar_catalogo", "consultar_transacional", "redigir"]
+    assert nos == ["filtrar", "rotear", "buscar_catalogo", "consultar_transacional", "redigir", "mascarar"]
     assert "qt_disponivel" in chamadas["contexto"]
 
 
 def test_aresta_bloqueada_nao_redige():
-    nos, chamadas = _nos("bloqueado", "qual a margem da Maria?")
-    assert nos == ["rotear", "recusar"]
+    nos, chamadas = _nos("bloqueado", "oi, tudo bem?")
+    assert nos == ["filtrar", "rotear", "recusar", "mascarar"]
     assert chamadas["redigir"] == 0
 
 
