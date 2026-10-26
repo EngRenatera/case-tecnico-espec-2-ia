@@ -56,6 +56,12 @@ def test_json_com_cerca_e_aceito():
     assert interpretar_intencao('```json\n{"intencao": "catalogo"}\n```') == "catalogo"
 
 
+def test_disponibilidade_nao_fica_em_conversa():
+    nos, chamadas = _nos("conversa", "Malbec Gold está disponível?")
+    assert "consultar_transacional" in nos
+    assert "qt_disponivel" in chamadas["contexto"]
+
+
 def test_tem_produto_consulta_estoque_mesmo_se_o_modelo_disser_catalogo():
     nos, chamadas = _nos("catalogo", "tem Malbec Gold?")
     assert "consultar_transacional" in nos
@@ -73,6 +79,13 @@ def test_aresta_de_pedido_consulta_o_ultimo():
     assert nos == ["filtrar", "rotear", "consultar_transacional", "redigir", "mascarar"]
     assert "cancelado" in chamadas["contexto"]
     assert "Loggi" in chamadas["contexto"]
+
+
+def test_promocao_com_estoque_passa_pelas_duas_fontes():
+    nos, chamadas = _nos("catalogo", "Malbec Gold está em promoção e tem estoque?")
+    assert nos == ["filtrar", "rotear", "buscar_catalogo", "consultar_transacional", "redigir", "mascarar"]
+    assert "qt_disponivel" in chamadas["contexto"]
+    assert "trecho do catálogo" in chamadas["contexto"]
 
 
 def test_aresta_ambos_passa_pelo_catalogo_e_pelo_transacional():

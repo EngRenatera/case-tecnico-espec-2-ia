@@ -99,13 +99,11 @@ def ajustar_intencao(intencao: Intencao, mensagem: str) -> Intencao:
     if intencao == "bloqueado" and margem_da_sessao(mensagem):
         return "pedido"
     frase = mensagem.lower()
-    if (
-        intencao == "catalogo"
-        and _pergunta_de_estoque(mensagem)
-        and not any(p in frase for p in ("promo", "preço", "preco"))
-    ):
-        return "pedido"
-    return intencao
+    if not _pergunta_de_estoque(mensagem):
+        return intencao
+    if any(p in frase for p in ("promo", "preço", "preco")):
+        return "ambos"
+    return "pedido"
 
 
 def produto_citado(texto: str) -> str | None:
@@ -279,8 +277,12 @@ def redigir_ollama(mensagem: str, contexto: str) -> str:
         [
             (
                 "system",
-                "Você é o assistente da revendedora. Responda em português, em uma ou duas frases, "
-                "só com os dados recebidos. Se houver qt_disponivel, a disponibilidade é esse número.",
+                "Você é o assistente da revendedora. Responda em português, em até três frases, "
+                "só com os dados recebidos. Não junte palavras de trechos diferentes. "
+                "Se os dados listarem regras de promoção, cite cada regra. "
+                "Se houver preço de tabela, inclua o valor. "
+                "Se houver qt_disponivel, a disponibilidade é esse número. "
+                "Se houver dt_pedido, informe a data.",
             ),
             ("human", f"Pergunta: {mensagem}\n\nDados:\n{contexto}"),
         ]
