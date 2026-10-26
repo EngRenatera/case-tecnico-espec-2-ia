@@ -80,11 +80,32 @@ def escolher_consulta(texto: str, id_pedido_em_foco: int | None) -> str:
     frase = texto.lower()
     if "margem" in frase:
         return "margem"
-    if any(p in frase for p in ("estoque", "disponív", "disponiv", "saldo")):
+    if _pergunta_de_estoque(texto):
         return "estoque"
     if id_pedido_em_foco is not None and any(p in frase for p in _REFERENCIA_AO_PEDIDO):
         return "pedido_em_foco"
     return "ultimo_pedido"
+
+
+def _pergunta_de_estoque(texto: str) -> bool:
+    frase = texto.lower()
+    if any(p in frase for p in ("estoque", "disponív", "disponiv", "saldo")):
+        return True
+    return "tem " in frase and produto_citado(texto) is not None
+
+
+def ajustar_intencao(intencao: Intencao, mensagem: str) -> Intencao:
+    """A regra leva a melhor quando o modelo recusa a margem da sessão ou manda estoque para o catálogo."""
+    if intencao == "bloqueado" and margem_da_sessao(mensagem):
+        return "pedido"
+    frase = mensagem.lower()
+    if (
+        intencao == "catalogo"
+        and _pergunta_de_estoque(mensagem)
+        and not any(p in frase for p in ("promo", "preço", "preco"))
+    ):
+        return "pedido"
+    return intencao
 
 
 def produto_citado(texto: str) -> str | None:
@@ -147,8 +168,7 @@ def criar_grafo(
                 break
             except (ValidationError, ValueError, json.JSONDecodeError):
                 continue
-        if intencao == "bloqueado" and margem_da_sessao(mensagem):
-            intencao = "pedido"
+        intencao = ajustar_intencao(intencao, mensagem)
         return {
             "intencao": intencao,
             "trechos_catalogo": [],

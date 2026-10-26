@@ -56,6 +56,13 @@ def test_json_com_cerca_e_aceito():
     assert interpretar_intencao('```json\n{"intencao": "catalogo"}\n```') == "catalogo"
 
 
+def test_tem_produto_consulta_estoque_mesmo_se_o_modelo_disser_catalogo():
+    nos, chamadas = _nos("catalogo", "tem Malbec Gold?")
+    assert "consultar_transacional" in nos
+    assert "qt_disponivel" in chamadas["contexto"]
+    assert ": 0" in chamadas["contexto"] or ": 0.0" in chamadas["contexto"]
+
+
 def test_aresta_de_catalogo_nao_consulta_pedido():
     nos, _ = _nos("catalogo", "quais produtos estão em promoção?")
     assert nos == ["filtrar", "rotear", "buscar_catalogo", "redigir", "mascarar"]
@@ -114,4 +121,5 @@ def test_escolher_consulta_prioriza_o_pedido_em_foco():
     assert escolher_consulta("qual a transportadora dele?", 10) == "pedido_em_foco"
     assert escolher_consulta("qual o status do meu último pedido?", None) == "ultimo_pedido"
     assert escolher_consulta("Malbec Gold está disponível?", 10) == "estoque"
+    assert escolher_consulta("tem Malbec Gold?", 10) == "estoque"
     assert RECUSA.startswith("Não consigo")
