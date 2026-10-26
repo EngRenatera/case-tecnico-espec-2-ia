@@ -24,6 +24,8 @@ if str(RAIZ) not in sys.path:
 from app.tools import DATABASE_URL
 
 API_URL = os.environ.get("API_URL", "http://127.0.0.1:8000")
+LOGO = RAIZ / "app" / "static" / "logo-boticario.svg"
+VERDE = "#499d71"
 
 
 def listar_revendedoras() -> list[tuple[int, str]]:
@@ -91,10 +93,46 @@ def _detalhe(resposta: httpx.Response) -> str:
         return corpo or "A API recusou a mensagem."
 
 
+def _aparencia() -> str:
+    return f"""
+    <style>
+      header[data-testid="stHeader"] {{
+        background: {VERDE};
+      }}
+      [data-testid="stDecoration"] {{
+        background: {VERDE};
+      }}
+      .stAppDeployButton, #MainMenu, footer {{
+        visibility: hidden;
+      }}
+      .marca svg {{
+        width: min(420px, 100%);
+        height: auto;
+        display: block;
+        margin: 0.4rem 0 0.8rem;
+        overflow: visible;
+      }}
+      h1 {{
+        color: #163028;
+      }}
+      [data-testid="stChatMessage"]:nth-of-type(odd) {{
+        background: #e7f3ec;
+        border-radius: 12px;
+        padding: 0.2rem 0.4rem;
+      }}
+    </style>
+    """
+
+
 def main() -> None:
     import streamlit as st
 
     st.set_page_config(page_title="Assistente da revendedora")
+    st.markdown(_aparencia(), unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="marca">{LOGO.read_text(encoding="utf-8")}</div>',
+        unsafe_allow_html=True,
+    )
     st.title("Assistente da revendedora")
     st.caption(
         "A tela guarda a revendedora e o histórico visível. "
@@ -114,7 +152,7 @@ def main() -> None:
 
     coluna_sessao, coluna_botao = st.columns([4, 1])
     coluna_sessao.caption(f"Sessão {st.session_state.id_sessao}")
-    if coluna_botao.button("Nova sessão", use_container_width=True):
+    if coluna_botao.button("Nova sessão", type="primary", use_container_width=True):
         st.session_state.id_sessao = criar_sessao(id_revendedora)
         st.session_state.mensagens = []
         st.rerun()
