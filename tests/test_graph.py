@@ -130,6 +130,54 @@ def test_segunda_mensagem_usa_o_pedido_em_foco():
     assert "Loggi" in estado["resposta"]
 
 
+def test_rotear_anota_intencao_crua_e_ajustada(monkeypatch):
+    anotacoes = []
+    monkeypatch.setattr(
+        "app.graph.anotar_roteamento",
+        lambda crua, ajustada: anotacoes.append((crua, ajustada)),
+    )
+
+    _nos("bloqueado", "qual a minha margem?")
+
+    assert anotacoes == [("bloqueado", "pedido")]
+
+
+def test_consulta_de_estoque_anota_a_ferramenta(monkeypatch):
+    anotacoes = []
+    monkeypatch.setattr(
+        "app.graph.anotar_ferramenta",
+        lambda escolha, qt_linhas: anotacoes.append((escolha, qt_linhas)),
+    )
+
+    _nos("pedido", "Malbec Gold está disponível?")
+
+    assert anotacoes[0][0] == "estoque"
+    assert anotacoes[0][1] >= 1
+
+
+def test_mascara_anota_quando_o_cpf_sai(monkeypatch):
+    flags = []
+    monkeypatch.setattr("app.graph.anotar_mascara", lambda alterou: flags.append(alterou))
+
+    def classificar(texto: str) -> str:
+        return '{"intencao": "conversa"}'
+
+    def redigir(mensagem: str, contexto: str) -> str:
+        return "cpf 529.982.247-25"
+
+    grafo = criar_grafo(classificar, redigir, MemorySaver(), buscar=lambda pergunta: [])
+    grafo.invoke(
+        {
+            "messages": [{"role": "user", "content": "oi"}],
+            "id_revendedora": _id_ana(),
+            "id_sessao": uuid.uuid4().hex,
+        },
+        config={"configurable": {"thread_id": uuid.uuid4().hex}},
+    )
+
+    assert flags == [True]
+
+
 def test_escolher_consulta_prioriza_o_pedido_em_foco():
     assert escolher_consulta("qual a transportadora dele?", 10) == "pedido_em_foco"
     assert escolher_consulta("qual o status do meu último pedido?", None) == "ultimo_pedido"

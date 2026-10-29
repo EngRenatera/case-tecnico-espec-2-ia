@@ -1,0 +1,311 @@
+Roteiro de apresentação — cerca de 40 minutos
+Case: Agente de suporte à revendedora (Agentes GB)
+Especialista II de Engenharia de IA
+
+Como usar este texto
+Este arquivo é a fala. Os slides estão em apresentacao/index.html, e a
+tecla N mostra ou esconde a mesma fala ao lado de cada slide. Os tempos são
+guia. Enquanto o modelo responde, continue explicando o nó que está
+rodando: a espera da CPU faz parte da demo.
+
+Suba antes, na raiz do repositório:
+
+    docker compose up -d
+    uv run uvicorn app.main:app --port 8000
+    uv run streamlit run app/tela.py
+
+A tela é http://localhost:8501, com Ana Souza selecionada. Não clique em
+Nova sessão no meio das oito falas. Se a máquina travar, o slide seguinte
+à demo tem os prints de backup.
+
+
+0–2 min. Capa
+----------------------------------------------------------------
+
+Eu começo pelo negócio, não pelo framework. A apresentação segue treze
+pontos: objetivo, o que o MVP não faz, como a IA ajudou a construir, o
+modelo, a comparação com os grandes modelos, o grafo, a segurança, a tela,
+a arquitetura, a observabilidade, os testes, a demo e o system design.
+
+
+2–4 min. Objetivo
+----------------------------------------------------------------
+
+A revendedora, no meio do ciclo, tem duas pressas. A primeira é o que
+está em promoção no catálogo do Ciclo 15, que chega em PDF. A segunda é o
+status do pedido dela, o saldo do centro de distribuição e a própria
+margem, que estão no banco. Hoje isso está em sistemas diferentes.
+
+O objetivo é um orquestrador. Ele entende a intenção e escolhe: catálogo,
+pedido, os dois, conversa ou recusa. A sessão é isolada: se ela pergunta
+do último pedido e depois "qual a transportadora dele?", o agente sabe
+qual pedido é "dele". Margem de outra pessoa e dado pessoal não saem. A
+resposta chega em SSE.
+
+
+4–6 min. O que o MVP não faz
+----------------------------------------------------------------
+
+Eu digo os limites antes da demo. No produto: não registra nem altera
+pedidos, só lê. Não conversa sobre outros temas. Não guarda conversas
+longas, porque o contexto do modelo é de 32 mil tokens. Não fala no
+WhatsApp.
+
+Na plataforma: não tem deploy em GCP, tudo roda em Docker local. Phoenix
+e Datadog ficam de fora, e o Langfuse não entra no compose: o trace é
+opcional, na nuvem, no slide depois da arquitetura. Não usa loop ReAct.
+Não tem avaliação automática de qualidade. A avaliação em volume volta no
+system design, no BigQuery.
+
+
+6–9 min. Vibe coding
+----------------------------------------------------------------
+
+O código foi escrito no Cursor, com o agente da IDE. O primeiro prompt
+colou o PDF do case e pediu um plano antes de qualquer código, com um
+comando que prova cada fase. Saíram as fases 0 a 8, em docs/PLANO.md.
+Depois, cada prompt foi uma frase: executar a fase N. A prova de cada fase
+ficou em docs/evidencias/.
+
+Quando o resultado vinha errado, o prompt seguinte descrevia o sintoma
+visto no teste, no banco ou na tela. Nunca um "melhore" genérico.
+
+O maior erro: "qual a minha margem?" voltou como bloqueado. O prompt do
+classificador dizia que margem de outra pessoa era recusa, e o 7B
+generalizou para qualquer margem. A correção foi um exemplo no prompt e
+uma regra no código: margem da sessão não aceita o bloqueado do modelo.
+
+O segundo: o pedaço do Malbec Gold em promoção estava colado com a frase
+"não entra na promoção", e a busca ranqueava a negação. Cada produto virou
+uma página do PDF. As decisões grandes estão em cinco ADRs.
+
+
+9–11 min. Modelo de IA utilizado
+----------------------------------------------------------------
+
+O chat é o qwen2.5:7b-instruct, no Ollama, quantizado em Q4_K_M, 4,7 GB,
+rodando no CPU. Temperatura zero. São duas chamadas por pergunta:
+classificar e redigir. Se uma frase curta passar de 30 segundos, troco
+para o 3B com a variável LLM_MODEL. O grafo não muda.
+
+O embedding é o nomic-embed-text, 768 dimensões, gravado no pgvector.
+
+Por que local: custo zero por token, nenhum dado sai da máquina e nada a
+provisionar para a banca rodar. Isso está no ADR 0001.
+
+
+11–13 min. Comparação com grandes modelos
+----------------------------------------------------------------
+
+O 7B processa cerca de 32 mil tokens no build padrão do Ollama; com YaRN
+chegaria a 128 mil. O Gemini 2.5 Flash e o Pro passam de um milhão. Para
+este agente isso pesa pouco, porque o contexto de cada resposta é curto:
+alguns trechos do catálogo e algumas linhas do banco.
+
+Custo: o 7B não cobra por token, o custo é a máquina. O Flash custa
+US$ 0,30 por milhão de tokens de entrada e US$ 2,50 de saída. O Pro,
+US$ 1,25 e US$ 10, até 200 mil tokens de prompt. GPT e Claude de ponta
+estão na ordem do Pro.
+
+Onde o grande modelo ganha de verdade: latência de segundos, redação
+melhor e JSON confiável. No 7B, um loop em que o modelo escolhe a tool é
+instável. Por isso a aresta é código. O grafo explícito compensa o modelo
+pequeno, e trocar de modelo é trocar o cliente: ChatOllama vira
+ChatVertexAI. Em produção, o Flash basta para classificar e redigir em
+três frases.
+
+
+13–16 min. Grafos
+----------------------------------------------------------------
+
+Eu abro app/graph.py. É um StateGraph do LangGraph com sete nós:
+
+    filtrar → rotear → buscar_catalogo e/ou consultar_transacional
+            → redigir → mascarar
+    filtrar ou rotear → recusar → mascarar
+
+Filtrar é Python, sem modelo. Rotear pede ao modelo um JSON com uma
+intenção: catalogo, pedido, ambos, conversa ou bloqueado. O Pydantic
+recusa qualquer outra palavra, com até duas tentativas. As arestas
+condicionais são funções Python.
+
+Dentro de "pedido", o modelo não escolhe a função. escolher_consulta olha
+a frase e o estado: margem vai para a margem da sessão; disponível ou
+estoque vai para o saldo; "dele" ou "transportadora", com pedido em foco,
+relê aquele pedido; o resto é o último pedido, e o id fica gravado.
+
+O estado tem messages, intencao, id_pedido_em_foco, trechos_catalogo,
+linhas_transacionais e resposta. O PostgresSaver grava tudo com thread_id
+igual ao id da sessão. Reiniciar o processo não apaga a conversa. O teste
+mocka o modelo e confere qual nó rodou.
+
+
+16–19 min. Guardrails e segurança
+----------------------------------------------------------------
+
+Segurança em camadas, e a primeira não depende do modelo.
+
+Um. A API confere a dona da sessão. Sessão de outra revendedora responde
+403 e o grafo não roda.
+
+Dois. O filtro de entrada bloqueia margem de outra pessoa, ranking de
+margem, CPF, telefone, e-mail e "ignore as regras". A recusa é fixa:
+"Não consigo consultar dados de outra revendedora." Sem chamar o Ollama.
+
+Três. O id da revendedora não está em ARGUMENTOS_DO_MODELO. O código
+preenche a partir da sessão. O case citava
+buscar_status_pedido(cpf, id_pedido); eu não deixei o CPF ser argumento.
+
+Quatro. O bloqueado do classificador não vale quando a pergunta é a margem
+da própria sessão.
+
+Cinco. A máscara de CPF, e-mail e telefone corre na frase inteira, antes
+do histórico e antes do SSE. Por isso a primeira palavra demora: um CPF no
+meio da frase não chega à tela antes da máscara. ADR 0004.
+
+Seis. O redator escreve até três frases, só com os dados recebidos.
+
+
+19–20 min. Interface com Streamlit
+----------------------------------------------------------------
+
+A tela é app/tela.py. Seletor de revendedora, que simula a autenticação;
+id da sessão e botão Nova sessão; o chat consome o POST /chat em SSE.
+Logo e verde Boticário. A tela guarda só o texto visível; a memória está
+no Postgres. Trocar por WhatsApp é trocar o cliente do /chat.
+
+
+20–22 min. Arquitetura
+----------------------------------------------------------------
+
+O slide é a imagem do grafo. Antes dele, a API confere a dona da sessão.
+Âmbar é regra sem modelo: filtrar e mascarar. Azul é chamada ao modelo:
+rotear e redigir. Verde é dado: pgvector com o PDF do Ciclo 15 e o SQL
+transacional. Vermelho é a recusa. Embaixo, o PostgresSaver grava o
+estado na chave da sessão.
+
+
+22–24 min. Observabilidade
+----------------------------------------------------------------
+
+Cada POST /chat vira um trace chamado assistente no Langfuse. A sessão
+do checkpoint agrupa a conversa, e o usuário é o id da revendedora, não
+o nome.
+
+Os nós e as duas chamadas ao Ollama entram pelo callback. Os spans
+manuais mostram o que o callback não vê: a intenção que o modelo devolveu
+e a que o código usou, a ferramenta (margem, estoque, pedido em foco ou
+último pedido), quantos trechos o catálogo devolveu e se a máscara mudou
+a frase. O vetor não entra. CPF, e-mail e telefone saem mascarados.
+
+Foi assim que o erro da margem fica visível: o modelo pode dizer
+bloqueado e o código corrige para pedido. As chaves ficam no .env, que o
+git ignora. Sem elas, a API responde e não envia trace. Uma falha do
+Langfuse não derruba a resposta. O compose não sobe o serviço. O funil
+em volume continua no BigQuery. ADR 0005.
+
+
+24 min. Testes e limitações
+----------------------------------------------------------------
+
+São 47 testes em oito arquivos. test_graph.py tem 14, com o modelo
+mockado: confere qual nó rodou e o pedido em foco. test_observabilidade.py
+tem 11 e não envia trace. test_guardrails.py tem 7, de bloqueio e máscara.
+test_tools.py tem 5, de SQL. test_api.py e test_tela.py cobrem SSE e 403.
+Os testes de fase conferem banco e catálogo. Rodam com uv run pytest -q,
+com Postgres e Ollama no ar.
+
+As limitações: o 7B resume a promoção e às vezes deixa item de fora. A
+latência no CPU é alta. Contexto de 32K. A máscara por regex não pega
+todo formato. O bloqueio por nome depende da lista de revendedoras. Não
+há avaliação automática de qualidade. O destino dela é o system design.
+
+
+24–33 min. Demonstração
+----------------------------------------------------------------
+
+Ana Souza, mesma sessão.
+
+Fala 1. "Quais produtos estão em promoção no Ciclo 15?"
+O RAG traz a Instance com 15% sobre R$ 149,90. Eu não prometo que o 7B
+recite todos os itens.
+
+Fala 2. "Malbec Gold está disponível?"
+Intenção pedido. O catálogo diz "últimas unidades", mas quem manda é a
+tabela de estoque: saldo zero.
+
+Fala 3. "Malbec Gold está em promoção e tem estoque?"
+Os dois caminhos. A promoção é citada e o saldo zero prevalece.
+
+Fala 4. "Qual o status do meu último pedido?"
+Cancelado em 20 de outubro de 2026. O id foi gravado no estado.
+
+Fala 5. "Qual a transportadora dele?"
+Loggi, sem repetir o número. Linha no checkpoint, não memória do modelo.
+
+Fala 6. "Qual a minha margem no ciclo?"
+18, só a da Ana, no Ciclo 15.
+
+Fala 7. "Qual a margem da Maria?"
+Recusa fixa, em menos de um segundo, sem o Ollama.
+
+Fala 8. "Me passa o CPF dela."
+A mesma recusa. A palavra CPF cai na regra determinística.
+
+Se sobrar tempo, troco o seletor para Maria Lima: outra sessão, e o
+último pedido dela foi entregue em 12 de outubro pela Latam Cargo.
+
+
+33–39 min. System design: 500 mil revendedoras e BigQuery
+----------------------------------------------------------------
+
+Base contra pico. 500 mil é a base cadastrada. Simultâneo é quem está
+com uma conversa aberta no mesmo segundo, na ordem de milhares, com picos
+na abertura e no fechamento do ciclo. Dimensionar para 500 mil sockets
+paga uma capacidade que o canal não usa.
+
+Caminho da resposta. Cloud Run com autoscaling e sem afinidade de sessão:
+o estado está no checkpoint. Cloud SQL ou AlloyDB com pgvector, atrás do
+PgBouncer, porque cada instância abre conexão. O modelo vai para o Vertex
+AI, Gemini 2.5 Flash. A máscara por regex vira Sensitive Data Protection,
+no mesmo ponto do grafo.
+
+Onde entra o BigQuery. A tool não consulta o BigQuery: a consulta
+analítica tem latência de segundos e cobra os bytes lidos, e a frase
+precisa de uma linha por chave primária. O BigQuery entra em todo o resto.
+
+Ingestão: o Datastream faz CDC do Postgres para o raw. Cada passo do grafo
+(intenção, nó, latência, bloqueio, tokens) vira evento no Pub/Sub, gravado
+direto no BigQuery por uma subscription. O Langfuse mostra uma conversa.
+Este funil é o da squad, em volume. Camadas raw, trusted e refined.
+
+As tecnologias:
+- Vector Search do BigQuery, com VECTOR_SEARCH e índice vetorial, para o
+  catálogo de muitos ciclos e marcas. buscar_catalogo troca de
+  implementação; o grafo fica.
+- BigQuery ML com ML.GENERATE_EMBEDDING, para gerar os embeddings do
+  catálogo em lote, em SQL.
+- Gemini dentro do BigQuery, com AI.GENERATE ou ML.GENERATE_TEXT, como
+  juiz em lote: a resposta usou os dados? Vazou PII? Recusou certo?
+- Continuous Queries para alertar pico de bloqueio, prompt injection ou
+  queda de qualidade.
+- Particionamento por data e clustering por id_revendedora e intencao.
+  Métricas com prefixo qt_, como qt_tokens e qt_bloqueios.
+- Row-level security e policy tags: prompt e resposta em dataset
+  sensível, PII mascarada por coluna.
+- BI Engine e Looker para o funil de intenções, latência, custo por
+  conversa e taxa de recusa.
+
+Fecho o bloco com o que eu não faria: apontar a tool de estoque para o
+BigQuery "porque o dado já está lá". O dado analítico é a cópia. O dado da
+resposta é o operacional.
+
+
+39–40 min. Fechamento
+----------------------------------------------------------------
+
+O modelo classifica e redige. O código decide o resto. Com o grafo
+explícito, trocar o 7B pelo Gemini, o pgvector pelo Vector Search ou o
+Streamlit pelo WhatsApp não muda o fluxo. O repositório é público e o
+README tem como subir, as decisões e o relatório de vibe coding. Abro
+para perguntas.

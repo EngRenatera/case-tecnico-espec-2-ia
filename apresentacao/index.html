@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Apresentação — Agente da revendedora</title>
+  <style>
+    :root {
+      --verde: #499d71;
+      --verde-escuro: #1c4a36;
+      --tinta: #163028;
+      --papel: #f4faf6;
+      --cartao: #ffffff;
+      --linha: #d5e8dc;
+      --nota: #e7f3ec;
+      --aviso: #8a5a12;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: var(--papel);
+      color: var(--tinta);
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+      font-size: 18px;
+      line-height: 1.45;
+    }
+
+    body {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      height: 100vh;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+      padding: 0.7rem 1.2rem;
+      background: white;
+      border-bottom: 4px solid var(--verde);
+    }
+
+    header svg { height: 28px; width: auto; }
+
+    header .meta {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      color: var(--verde-escuro);
+      font-size: 0.85rem;
+    }
+
+    header button, footer button {
+      background: var(--verde);
+      color: white;
+      border: 0;
+      border-radius: 999px;
+      padding: 0.35rem 0.85rem;
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    header button.secundario, footer button.secundario {
+      background: white;
+      color: var(--verde-escuro);
+      border: 1px solid var(--verde);
+    }
+
+    main { min-height: 0; }
+
+    .slide {
+      display: none;
+      height: 100%;
+      grid-template-columns: minmax(0, 1fr) 340px;
+    }
+
+    .slide.ativa { display: grid; }
+
+    body.sem-notas .slide.ativa { grid-template-columns: 1fr; }
+    body.sem-notas .notas { display: none; }
+
+    .corpo {
+      overflow: auto;
+      padding: 1.6rem 2.2rem 1.2rem;
+    }
+
+    .notas {
+      overflow: auto;
+      background: var(--nota);
+      border-left: 1px solid var(--linha);
+      padding: 1.1rem 1.1rem 1.4rem;
+      font-size: 0.92rem;
+    }
+
+    .notas h2 {
+      margin: 0 0 0.6rem;
+      font-size: 0.78rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--verde-escuro);
+    }
+
+    .notas p { margin: 0 0 0.7rem; }
+
+    .tempo {
+      display: inline-block;
+      margin-bottom: 0.7rem;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      background: var(--verde);
+      color: white;
+      font-size: 0.78rem;
+      letter-spacing: 0.03em;
+    }
+
+    h1 {
+      margin: 0 0 0.4rem;
+      font-size: 2.1rem;
+      line-height: 1.15;
+      font-weight: 650;
+    }
+
+    .olho {
+      margin: 0 0 1.1rem;
+      font-size: 1.15rem;
+      max-width: 42rem;
+    }
+
+    h3 {
+      margin: 0.2rem 0 0.7rem;
+      font-size: 1.35rem;
+    }
+
+    ul { margin: 0.2rem 0 0; padding-left: 1.15rem; }
+    li { margin: 0.35rem 0; }
+    li strong { color: var(--verde-escuro); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.95rem;
+    }
+
+    th, td {
+      text-align: left;
+      vertical-align: top;
+      padding: 0.45rem 0.6rem;
+      border-bottom: 1px solid var(--linha);
+    }
+
+    th { color: var(--verde-escuro); font-weight: 650; }
+
+    code {
+      font-family: "IBM Plex Mono", "Source Code Pro", ui-monospace, monospace;
+      font-size: 0.86em;
+      background: var(--nota);
+      padding: 0.05rem 0.3rem;
+      border-radius: 4px;
+    }
+
+    .fluxo {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      align-items: center;
+      margin-top: 0.8rem;
+    }
+
+    .caixa {
+      background: white;
+      border: 2px solid var(--verde);
+      border-radius: 12px;
+      padding: 0.55rem 0.75rem;
+      min-width: 7.2rem;
+    }
+
+    .caixa b { display: block; color: var(--verde-escuro); }
+    .caixa span { display: block; font-size: 0.82rem; }
+
+    .seta { color: var(--verde); font-size: 1.4rem; }
+
+    .duas {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+    }
+
+    .cartao {
+      background: white;
+      border-radius: 14px;
+      padding: 0.9rem 1rem;
+      border: 1px solid var(--linha);
+    }
+
+    .cartao h3 { margin-top: 0; }
+
+    .fala {
+      display: grid;
+      grid-template-columns: 2.2rem 1fr auto;
+      gap: 0.4rem 0.7rem;
+      align-items: baseline;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid var(--linha);
+    }
+
+    .fala b { color: var(--verde-escuro); }
+
+    .tag {
+      font-size: 0.75rem;
+      border-radius: 999px;
+      padding: 0.1rem 0.45rem;
+      background: var(--nota);
+      color: var(--verde-escuro);
+    }
+
+    .capa {
+      min-height: 70%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .capa p { max-width: 36rem; font-size: 1.25rem; }
+
+    footer {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.55rem 1rem;
+      background: white;
+      border-top: 1px solid var(--linha);
+      font-size: 0.85rem;
+    }
+
+    footer .contador { margin-left: auto; color: var(--verde-escuro); }
+
+    .pre {
+      font-family: ui-monospace, monospace;
+      font-size: 0.82rem;
+      background: var(--verde-escuro);
+      color: #e7f6ee;
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      white-space: pre-wrap;
+    }
+
+    .figura { margin: 0; }
+
+    .figura img {
+      display: block;
+      max-width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--linha);
+      background: white;
+    }
+
+    .figura figcaption {
+      margin-top: 0.3rem;
+      font-size: 0.82rem;
+      color: var(--verde-escuro);
+    }
+
+    .figura.cheia img { max-height: calc(100vh - 15rem); margin: 0 auto; }
+
+    .lado {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+      gap: 1.2rem;
+      align-items: start;
+    }
+
+    .lado img { max-height: calc(100vh - 16rem); }
+
+    .galeria {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.8rem;
+    }
+
+    .galeria img { height: calc(50vh - 9.5rem); width: 100%; object-fit: cover; object-position: bottom; }
+
+    .figura img { cursor: zoom-in; }
+
+    #zoom {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(22, 48, 40, 0.85);
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+      z-index: 10;
+    }
+
+    #zoom.aberto { display: flex; }
+    #zoom img { max-width: 92vw; max-height: 92vh; border-radius: 10px; background: white; }
+
+    .camadas { display: grid; gap: 0.45rem; }
+
+    .camada {
+      background: white;
+      border: 1px solid var(--linha);
+      border-radius: 14px;
+      padding: 0.5rem 0.9rem 0.6rem;
+    }
+
+    .camada > b { color: var(--verde-escuro); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    .camada .fluxo { margin-top: 0.4rem; }
+
+    table + .olho, .camadas + .olho { margin-top: 0.9rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <svg viewBox="0 0 500 65" aria-label="O Boticário" fill="#499d71">
+      <path d="m107.96 31.118c5.2609-2.776 9.1028-7.5303 9.1028-13.843 0-10.983-8.4816-17.275-23.257-17.275h-27.94v64.763h30.16c14.491 0 23.499-7.0134 23.499-18.286 0.0115-7.6151-5.0294-12.671-11.565-15.359zm-13.912-2.4528h-17.372v-23.288h16.374c9.2186 0 13.144 3.5611 13.144 11.897 0 8.0461-3.631 11.391-12.145 11.391zm-17.364 30.719v-25.342h17.207c5.4408 0 14.576 1.6344 14.576 12.585 0 8.9492-3.9577 12.757-13.238 12.757zm-76.483-22.35c0-15.437 11.775-27.966 26.308-27.966 14.501 0 26.308 12.53 26.308 27.966 0 15.434-11.817 27.965-26.308 27.965-14.491-0.001146-26.309-12.531-26.309-27.968zm10.196 0c0 14.132 6.0196 22.586 16.112 22.586v-0.02063c10.05 0 16.049-8.4335 16.049-22.567 0-14.133-5.9566-22.587-16.049-22.587-10.092 0-16.112 8.4541-16.112 22.586zm118.25 0c0-15.437 11.776-27.966 26.309-27.966 14.501 0 26.309 12.53 26.309 27.966 0 15.434-11.818 27.965-26.309 27.965s-26.309-12.531-26.309-27.966zm10.197 0c0 14.132 6.0196 22.586 16.112 22.586v-0.02063c10.05 0 16.049-8.4335 16.049-22.567 0-14.133-5.9566-22.587-16.049-22.587-10.092 0-16.112 8.4541-16.112 22.587zm63.92-21.943h-19.258v-5.3148h48.292v5.3136h-19.343v49.123h-9.6919v-49.125zm48.565-5.3136h-9.755v54.437h9.755v-54.438zm37.107 49.703c4.3245 0 12.07-1.3662 15.375-10.499l0.93756-2.6453 4.7233 2.3554-0.76908 2.1513c-3.2723 8.9286-10.806 14.059-20.677 14.059-14.829 0-26.013-11.983-26.013-27.859 0-15.671 11.426-27.966 26.013-27.966 9.8169 0 17.299 5.1738 20.542 14.209l0.75646 2.1513-4.7245 2.4092-0.93756-2.6671c-2.3886-6.744-7.9337-10.617-15.226-10.617-10.136 0-16.187 8.3784-16.187 22.449 0 14.069 6.0517 22.469 16.187 22.469zm123.44-5.1188-2.831-8.2615a13.995 13.995 0 0 0-6.0506-7.238c5.0718-2.2694 9.4707-6.5297 9.4707-13.348 0-9.8421-7.8615-15.715-21.046-15.715h-19.827v54.437h9.7664v-23.17h8.5137c6.2397 0 8.2501 2.4963 9.9773 7.4329l2.7451 7.8512a26.762 26.762 0 0 0 3.0717 6.7773l0.73812 1.0751h13.122l-4.6408-4.3669a13.265 13.265 0 0 1-3.0098-5.4741zm-30.518-39.281h9.4066c8.1985 0 11.705 3.129 11.705 10.464 0 7.0455-3.5886 10.187-11.629 10.187h-9.4719zm45.346-5.3033h9.755v54.437h-9.755v-54.438zm46.787-0.71062c-14.523 0-26.31 12.531-26.31 27.966 0 15.435 11.83 27.966 26.31 27.966 14.481 0 26.307-12.531 26.307-27.966 0-15.435-11.805-27.966-26.307-27.966zm0 5.3136c10.05 0 16.046 8.4552 16.046 22.589s-5.9967 22.587-16.046 22.587c-10.051 0-16.154-8.422-16.154-22.567 0-14.144 6.0724-22.609 16.154-22.609zm-134.48-13.251h5.7262l-4.4299 10.552 23.32 52.565h-10.377l-8.2191-18.49h-19.236l-7.967 18.458h-5.7136zm-3.8511 22.426-7.1337 16.823h14.606z"/>
+    </svg>
+    <div class="meta">
+      <span id="tempo"></span>
+      <button type="button" id="notas" class="secundario">Esconder a fala</button>
+    </div>
+  </header>
+
+  <main id="palco">
+
+    <section class="slide ativa">
+      <div class="corpo capa">
+        <span class="tempo">0–2 min</span>
+        <h1>A revendedora pergunta.<br>O sistema decide onde buscar.</h1>
+        <p>Assistente do Ciclo 15 para a venda direta. MVP local: FastAPI na porta, LangGraph no miolo, Postgres na memória, Streamlit na tela. Na última parte, o desenho para 500 mil revendedoras com BigQuery.</p>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>Eu começo pelo negócio, não pelo framework. A apresentação segue treze pontos: objetivo, o que o MVP não faz, como a IA me ajudou a construir, o modelo, a comparação com os grandes modelos, o grafo, a segurança, a tela, a arquitetura, a observabilidade, os testes, a demo e o system design.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">2–4 min</span>
+        <h3>Objetivo</h3>
+        <p class="olho">Uma revendedora pergunta em português. O assistente descobre a intenção e busca a resposta na fonte certa, sem vazar dado de outra pessoa.</p>
+        <div class="duas">
+          <article class="cartao">
+            <h3>Catálogo</h3>
+            <p>O que está em promoção no Ciclo 15, Boticário e Eudora. A fonte é um PDF, e a busca é por semelhança no pgvector.</p>
+          </article>
+          <article class="cartao">
+            <h3>Transacional</h3>
+            <p>Status do pedido, saldo do centro de distribuição e a margem de quem está na sessão. A fonte é SQL no Postgres.</p>
+          </article>
+        </div>
+        <ul>
+          <li><strong>Orquestrador:</strong> catálogo, pedido, os dois, conversa ou recusa.</li>
+          <li><strong>Sessão isolada:</strong> “qual a transportadora dele?” sabe qual pedido é “dele”.</li>
+          <li><strong>Streaming:</strong> a resposta chega por SSE, já mascarada.</li>
+        </ul>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>No meio do ciclo, a revendedora tem duas pressas: o que está em promoção no PDF e o status do pedido ou o estoque do centro de distribuição. Hoje isso está em sistemas diferentes.</p>
+        <p>O case não pede um chatbot genérico. Pede um orquestrador que entende a intenção e escolhe a fonte. A margem de outra pessoa e o dado pessoal não podem sair.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">4–6 min</span>
+        <h3>O que o MVP não faz</h3>
+        <div class="duas">
+          <article class="cartao">
+            <h3>No produto</h3>
+            <ul>
+              <li>Não registra nem altera pedidos. Só lê.</li>
+              <li>Não conversa sobre outros temas e não trata saudação como fluxo.</li>
+              <li>Não guarda conversas longas: o contexto do modelo é de 32 mil tokens.</li>
+              <li>Não fala no WhatsApp. A tela é Streamlit.</li>
+            </ul>
+          </article>
+          <article class="cartao">
+            <h3>Na plataforma</h3>
+            <ul>
+              <li>Não tem deploy em GCP. Tudo roda em Docker local.</li>
+              <li>Não sobe Phoenix, Datadog nem o Langfuse no Docker. O trace é opcional e fica na nuvem.</li>
+              <li>Não usa loop ReAct: o modelo não escolhe a sequência de tools.</li>
+              <li>Não tem avaliação automática da qualidade das respostas.</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>Eu prefiro dizer o limite antes da demo. O MVP é de leitura. Cadastro de pedido seria outra tool, com confirmação e auditoria.</p>
+        <p>O trace de uma conversa está no Langfuse, no slide depois da arquitetura. Phoenix e Datadog continuam de fora, e o compose não sobe o Langfuse. O funil em volume, para a squad, continua no BigQuery.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">6–9 min</span>
+        <h3>O Vibe Coding para criar o projeto</h3>
+        <div class="fluxo">
+          <div class="caixa"><b>PDF do case</b><span>primeiro prompt</span></div>
+          <span class="seta">→</span>
+          <div class="caixa"><b>docs/PLANO.md</b><span>fases 0 a 8</span></div>
+          <span class="seta">→</span>
+          <div class="caixa"><b>“executar a fase N”</b><span>aprender, fazer, provar</span></div>
+          <span class="seta">→</span>
+          <div class="caixa"><b>docs/evidencias/</b><span>comando e saída</span></div>
+        </div>
+        <ul>
+          <li><strong>Ferramenta:</strong> o agente do Cursor. A validação rodou no terminal: <code>uv</code>, <code>pytest</code>, Docker, Postgres e Ollama.</li>
+          <li><strong>Disciplina:</strong> quando o resultado vinha errado, o prompt seguinte descrevia o sintoma visto no teste, no banco ou na tela. Nunca um “melhore” genérico.</li>
+          <li><strong>Erro 1:</strong> “qual a minha margem?” voltou como <code>bloqueado</code>. A correção foi um exemplo no prompt e uma regra no código.</li>
+          <li><strong>Erro 2:</strong> o chunk do Malbec Gold em promoção trazia junto a frase “não entra na promoção”. A correção foi uma página do PDF por produto.</li>
+          <li><strong>Decisões registradas:</strong> cinco ADRs em <code>docs/adr/</code>.</li>
+        </ul>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>O case avalia como a IA foi usada, não só o código. O primeiro prompt pediu um plano antes de qualquer código, com um comando que prova cada fase. Depois, cada prompt foi uma frase: executar a fase N.</p>
+        <p>O maior obstáculo foi o modelo de chat, não o editor. O 7B generalizou “margem de outra pessoa” para qualquer margem. O código passou a ignorar esse bloqueado quando a frase é a margem da sessão.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">9–11 min</span>
+        <h3>Modelo de IA utilizado</h3>
+        <div class="duas">
+          <article class="cartao">
+            <h3>Chat: qwen2.5:7b-instruct</h3>
+            <ul>
+              <li>Ollama em Docker, no CPU, quantizado em Q4_K_M (4,7 GB).</li>
+              <li><code>temperature=0</code>, duas chamadas por pergunta: classificar e redigir.</li>
+              <li>Contexto de 32K no build padrão do Ollama.</li>
+              <li>Fallback <code>qwen2.5:3b-instruct</code> com <code>LLM_MODEL</code>. O grafo não muda.</li>
+            </ul>
+          </article>
+          <article class="cartao">
+            <h3>Embedding: nomic-embed-text</h3>
+            <ul>
+              <li>Vetores de 768 dimensões.</li>
+              <li>Uma página do PDF por produto, gravada no pgvector.</li>
+              <li>Busca por distância do vetor, não por palavra exata.</li>
+            </ul>
+          </article>
+        </div>
+        <p>Por que local: custo zero por token, nenhum dado sai da máquina e nada a provisionar para a banca rodar (ADR 0001).</p>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>O modelo é pequeno de propósito. Ele roda no notebook, sem GPU dedicada. Isso obriga o desenho a ser robusto: o modelo classifica e redige, e o código decide o resto.</p>
+        <p>Se uma frase curta passar de 30 segundos, eu troco para o 3B com uma variável de ambiente.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">11–13 min</span>
+        <h3>Comparação com grandes modelos</h3>
+        <table>
+          <thead><tr><th></th><th>Qwen2.5 7B (MVP)</th><th>Gemini 2.5 Flash</th><th>Gemini 2.5 Pro</th><th>GPT e Claude</th></tr></thead>
+          <tbody>
+            <tr><td><b>Contexto</b></td><td>32K (128K com YaRN)</td><td>1M</td><td>1M</td><td>centenas de milhares a 1M</td></tr>
+            <tr><td><b>Custo por 1M tokens</b></td><td>zero, o custo é a máquina</td><td>US$ 0,30 entrada, US$ 2,50 saída</td><td>US$ 1,25 entrada, US$ 10 saída</td><td>da ordem do Pro</td></tr>
+            <tr><td><b>Latência</b></td><td>dezenas de segundos no CPU</td><td>segundos</td><td>segundos, com raciocínio</td><td>segundos</td></tr>
+            <tr><td><b>JSON e tool calling</b></td><td>instável, daí o roteador explícito</td><td>saída estruturada nativa</td><td>saída estruturada nativa</td><td>nativo</td></tr>
+            <tr><td><b>Dado</b></td><td>não sai da máquina</td><td colspan="3">vai para a nuvem, sob contrato e com residência de dados (Vertex AI)</td></tr>
+          </tbody>
+        </table>
+        <p class="olho">O grafo explícito compensa o modelo pequeno. Trocar o modelo é trocar o cliente: <code>ChatOllama</code> vira <code>ChatVertexAI</code>.</p>
+        <p style="font-size:0.8rem">Preços de lista da API Gemini, até 200K tokens de prompt, consultados em outubro de 2026.</p>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>O 7B processa cerca de 32 mil tokens. O Gemini passa de um milhão. Para este agente isso pouco importa, porque o contexto de cada resposta é curto: alguns trechos do catálogo e algumas linhas do banco.</p>
+        <p>Onde o grande modelo ganha de verdade é na latência, na qualidade da redação e na confiabilidade do JSON. No 7B, um loop em que o modelo escolhe a tool é instável. Por isso a aresta é código.</p>
+        <p>Em produção, o Flash é o candidato natural: classificar e redigir em três frases não exige o Pro.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">13–16 min</span>
+        <h3>Grafos: LangGraph com aresta em código</h3>
+        <div class="fluxo">
+          <div class="caixa"><b>filtrar</b><span>regra em Python</span></div>
+          <span class="seta">→</span>
+          <div class="caixa"><b>rotear</b><span>modelo devolve um JSON</span></div>
+          <span class="seta">→</span>
+          <div class="caixa"><b>buscar_catalogo</b><span>e/ou consultar_transacional</span></div>
+          <span class="seta">→</span>
+          <div class="caixa"><b>redigir</b><span>só com os dados</span></div>
+          <span class="seta">→</span>
+          <div class="caixa"><b>mascarar</b><span>frase inteira</span></div>
+        </div>
+        <div class="duas" style="margin-top:1rem">
+          <article class="cartao">
+            <h3>StateGraph</h3>
+            <ul>
+              <li>Sete nós; <code>recusar</code> pula direto para <code>mascarar</code>.</li>
+              <li>Intenção validada pelo Pydantic: <code>catalogo | pedido | ambos | conversa | bloqueado</code>.</li>
+              <li>As arestas condicionais são funções Python, não o modelo.</li>
+            </ul>
+          </article>
+          <article class="cartao">
+            <h3>Estado e memória</h3>
+            <ul>
+              <li><code>messages</code>, <code>intencao</code>, <code>id_pedido_em_foco</code>, <code>trechos_catalogo</code>, <code>linhas_transacionais</code>, <code>resposta</code>.</li>
+              <li>PostgresSaver com <code>thread_id</code> igual ao id da sessão.</li>
+              <li>Reiniciar o processo não apaga a conversa.</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>O arquivo é <code>app/graph.py</code>. O modelo classifica uma vez. Dentro de “pedido”, <code>escolher_consulta</code> olha a frase e o estado: margem, estoque, pedido em foco ou último pedido. O modelo não escolhe a função.</p>
+        <p>“Dele” não é a memória do modelo. É o <code>id_pedido_em_foco</code> gravado no checkpoint pela pergunta anterior. Qualquer instância lê a mesma linha.</p>
+        <p>O teste mocka o modelo e confere qual nó rodou (ADR 0003).</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">16–19 min</span>
+        <h3>Guardrails e segurança</h3>
+        <table>
+          <thead><tr><th>Camada</th><th>O que faz</th><th>Onde</th></tr></thead>
+          <tbody>
+            <tr><td><b>Dona da sessão</b></td><td>Sessão de outra revendedora responde 403 e o grafo não roda.</td><td><code>app/main.py</code></td></tr>
+            <tr><td><b>Filtro de entrada</b></td><td>Margem alheia, ranking, CPF, telefone, e-mail e “ignore as regras” recebem a recusa fixa, sem chamar o modelo.</td><td><code>app/guardrails.py</code></td></tr>
+            <tr><td><b>Identidade fora do modelo</b></td><td><code>id_revendedora</code> não está em <code>ARGUMENTOS_DO_MODELO</code>. O código preenche a partir da sessão, e o CPF nunca é argumento.</td><td><code>app/tools.py</code></td></tr>
+            <tr><td><b>Correção do classificador</b></td><td>O <code>bloqueado</code> do modelo não vale quando a pergunta é sobre a margem da própria sessão.</td><td><code>app/graph.py</code></td></tr>
+            <tr><td><b>Máscara de saída</b></td><td>CPF, e-mail e telefone mascarados na frase inteira, antes do histórico e antes do SSE.</td><td>ADR 0004</td></tr>
+            <tr><td><b>Redação ancorada</b></td><td>O modelo escreve até três frases, só com os dados recebidos.</td><td><code>redigir</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>Segurança em camadas. A primeira não depende do modelo. Mesmo que alguém engane o classificador, a query de margem só aceita o id da sessão: a Maria não entra como parâmetro.</p>
+        <p>A primeira palavra demora porque a frase inteira é gerada e mascarada antes do streaming. Um CPF no meio da frase não chega à tela antes da máscara. Os CPFs da semente são fictícios.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">19–20 min</span>
+        <h3>Interface com Streamlit</h3>
+        <div class="lado">
+          <figure class="figura"><img src="assets/demo-estoque.png" alt="Tela Streamlit do assistente"></figure>
+          <ul>
+            <li><strong>Seletor de revendedora:</strong> simula a autenticação.</li>
+            <li><strong>Id da sessão e Nova sessão:</strong> trocar a revendedora abre outra sessão.</li>
+            <li><strong>Chat:</strong> consome o <code>POST /chat</code> em SSE e escreve à medida que o texto chega.</li>
+            <li><strong>Identidade visual:</strong> logo e verde Boticário.</li>
+            <li>A tela guarda só o texto visível. A memória fica no Postgres.</li>
+          </ul>
+        </div>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>O Streamlit é uma casca fina sobre a API, em <code>app/tela.py</code>. Trocar por WhatsApp ou pelo app da revendedora é trocar o cliente do <code>POST /chat</code>. O grafo não muda.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">20–22 min</span>
+        <h3>Arquitetura</h3>
+        <figure class="figura cheia"><img src="assets/arquitetura-grafo.jpg" alt="Grafo do assistente da revendedora, Ciclo 15"></figure>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>Antes do grafo, a API confere a dona da sessão. Âmbar é regra sem modelo: filtrar e mascarar. Azul é chamada ao modelo: rotear e redigir. Verde é dado: o pgvector e o SQL. Vermelho é a recusa fixa.</p>
+        <p>O PostgresSaver grava o estado na chave da sessão. É isso que faz a pergunta seguinte saber qual pedido é “dele”.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">22–24 min</span>
+        <h3>Observabilidade: um trace por mensagem</h3>
+        <p class="olho">Cada <code>POST /chat</code> vira um trace <code>assistente</code> no Langfuse. A sessão do checkpoint agrupa a conversa. O usuário é o <code>id_revendedora</code>.</p>
+        <div class="fluxo">
+          <div class="caixa"><b>mensagem</b><span>a pergunta</span></div>
+          <span class="seta">→</span>
+          <div class="caixa"><b>roteamento</b><span>intenção crua e ajustada</span></div>
+          <span class="seta">→</span>
+          <div class="caixa"><b>ferramenta</b><span>margem, estoque ou pedido</span></div>
+          <span class="seta">→</span>
+          <div class="caixa"><b>redigir</b><span>as duas chamadas ao Ollama</span></div>
+          <span class="seta">→</span>
+          <div class="caixa"><b>mascarar</b><span>se o texto mudou</span></div>
+        </div>
+        <ul>
+          <li><strong>Liga com chave:</strong> <code>LANGFUSE_PUBLIC_KEY</code> e <code>LANGFUSE_SECRET_KEY</code> no <code>.env</code>. Sem elas, a API responde e não envia nada.</li>
+          <li><strong>O que o callback não vê:</strong> a intenção que o modelo devolveu e a que o código usou, a ferramenta e a quantidade de trechos. O vetor não entra.</li>
+          <li><strong>PII:</strong> CPF, e-mail e telefone passam pela mesma máscara da saída antes da exportação.</li>
+          <li><strong>Fora do compose:</strong> Langfuse Cloud. O funil da squad continua no BigQuery. ADR 0005.</li>
+        </ul>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>O trace é uma execução do grafo, uma pergunta. Os nós e as duas chamadas ao Ollama entram pelo callback. Os spans manuais mostram o que o modelo errou e o código corrigiu: “qual a minha margem?” pode sair como bloqueado e virar pedido.</p>
+        <p>O serviço não está no Docker. As chaves ficam no <code>.env</code>, que o git ignora. Uma falha do Langfuse não derruba a resposta. O BigQuery, no system design, continua sendo o funil em volume. O Langfuse observa o caminho desta conversa.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">24 min</span>
+        <h3>Testes e limitações</h3>
+        <div class="duas">
+          <article class="cartao">
+            <h3>47 testes, 8 arquivos</h3>
+            <ul>
+              <li><code>test_graph.py</code> (14): o modelo mockado; confere qual nó rodou e o pedido em foco.</li>
+              <li><code>test_observabilidade.py</code> (11): sem chave não há callback; intenção, ferramenta e máscara.</li>
+              <li><code>test_guardrails.py</code> (7): bloqueios e máscara.</li>
+              <li><code>test_tools.py</code> (5): SQL de pedido, estoque e margem.</li>
+              <li><code>test_api.py</code> (2) e <code>test_tela.py</code> (2): SSE e 403.</li>
+              <li><code>test_fase_0.py</code> e <code>test_fase_2.py</code> (6): banco e catálogo.</li>
+            </ul>
+            <p><code>uv run pytest -q</code>, com Postgres e Ollama no ar.</p>
+          </article>
+          <article class="cartao">
+            <h3>Limitações conhecidas</h3>
+            <ul>
+              <li>O 7B resume a promoção e às vezes deixa item de fora.</li>
+              <li>Latência alta no CPU, e o SSE espera a frase inteira.</li>
+              <li>Contexto de 32K: conversas longas perdem o começo.</li>
+              <li>A máscara por regex não pega todo formato de PII.</li>
+              <li>O bloqueio por nome depende da lista de revendedoras.</li>
+              <li>Ainda não há avaliação automática de qualidade.</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>Os testes de grafo não dependem do humor do modelo: o classificador e o redator são substituídos. O que muda com o modelo, a redação, eu confiro no roteiro da demo, que lista o que precisa aparecer em cada resposta.</p>
+        <p>As limitações têm destino no system design: Gemini para latência e redação, Sensitive Data Protection para PII e o BigQuery para a avaliação em volume. O trace de uma conversa já está no Langfuse.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">24–33 min</span>
+        <h3>Demonstração</h3>
+        <div class="pre">docker compose up -d
+uv run uvicorn app.main:app --port 8000
+uv run streamlit run app/tela.py      # http://localhost:8501</div>
+        <p>Ana Souza, mesma sessão, sem clicar em Nova sessão.</p>
+        <div class="fala"><b>1</b><span>Quais produtos estão em promoção no Ciclo 15?</span><span class="tag">catálogo</span></div>
+        <div class="fala"><b>2</b><span>Malbec Gold está disponível?</span><span class="tag">estoque 0</span></div>
+        <div class="fala"><b>3</b><span>Malbec Gold está em promoção e tem estoque?</span><span class="tag">os dois</span></div>
+        <div class="fala"><b>4</b><span>Qual o status do meu último pedido?</span><span class="tag">cancelado</span></div>
+        <div class="fala"><b>5</b><span>Qual a transportadora dele?</span><span class="tag">Loggi</span></div>
+        <div class="fala"><b>6</b><span>Qual a minha margem no ciclo?</span><span class="tag">18</span></div>
+        <div class="fala"><b>7</b><span>Qual a margem da Maria?</span><span class="tag">recusa</span></div>
+        <div class="fala"><b>8</b><span>Me passa o CPF dela.</span><span class="tag">recusa</span></div>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>Enquanto o modelo pensa, eu explico o nó que está rodando. Fala 1: o RAG traz a Instance com 15% sobre R$ 149,90. Fala 2: o catálogo diz “últimas unidades”, mas quem manda é a tabela de estoque, e o saldo é zero. Fala 3: os dois caminhos, e o saldo zero prevalece.</p>
+        <p>Fala 4: cancelado em 20 de outubro, e o id fica gravado no estado. Fala 5: Loggi, sem repetir o número. Fala 6: 18, só a da Ana. Falas 7 e 8: recusa fixa em menos de um segundo, sem o Ollama.</p>
+        <p>Se sobrar tempo, troco para Maria Lima: o último pedido dela foi entregue em 12 de outubro pela Latam Cargo.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">24–33 min</span>
+        <h3>Demonstração: prints de backup</h3>
+        <div class="galeria">
+          <figure class="figura"><img src="assets/demo-catalogo.png" alt="Fala 1, catálogo"><figcaption>Fala 1: promoção pelo catálogo</figcaption></figure>
+          <figure class="figura"><img src="assets/demo-estoque.png" alt="Falas 2 e 3, estoque"><figcaption>Falas 2 e 3: estoque zero prevalece</figcaption></figure>
+          <figure class="figura"><img src="assets/demo-pedido.png" alt="Falas 4 e 5, pedido em foco"><figcaption>Falas 4 e 5: “dele” vem do estado</figcaption></figure>
+          <figure class="figura"><img src="assets/demo-recusa.png" alt="Falas 6 a 8, margem e recusa"><figcaption>Falas 6 a 8: margem própria e recusas</figcaption></figure>
+        </div>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>Se o Ollama travar ou a máquina estiver lenta, eu sigo por estes prints, capturados na mesma sessão da Ana.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">33–35 min</span>
+        <h3>System design: 500 mil é a base, não o pico</h3>
+        <div class="duas">
+          <article class="cartao">
+            <h3>500 mil</h3>
+            <p>Revendedoras cadastradas. Dimensionar para 500 mil sockets paga uma capacidade que o canal não usa.</p>
+          </article>
+          <article class="cartao">
+            <h3>Milhares</h3>
+            <p>Pico de conversas abertas no mesmo segundo, estimado pela curva do ciclo de vendas, com picos na abertura e no fechamento do ciclo.</p>
+          </article>
+        </div>
+        <ul>
+          <li><strong>API:</strong> Cloud Run, autoscaling e nenhuma afinidade de sessão. O estado está no checkpoint.</li>
+          <li><strong>Caminho da resposta:</strong> Cloud SQL ou AlloyDB com pgvector, atrás de um pool PgBouncer. Leitura por chave primária, em milissegundos.</li>
+          <li><strong>Modelo:</strong> Vertex AI Gemini 2.5 Flash. A máscara vira Sensitive Data Protection, no mesmo ponto do grafo.</li>
+        </ul>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>A pergunta do case fala em 500 mil simultâneas. Eu separo base de pico. O tamanho do Cloud Run e do pool sai do pico concorrente, na ordem de milhares.</p>
+        <p>A frase da revendedora precisa de uma linha: o pedido dela, o saldo deste SKU. Isso é trabalho de banco operacional. O BigQuery entra em todo o resto.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">35–37 min</span>
+        <h3>System design: onde o BigQuery entra</h3>
+        <div class="camadas">
+          <div class="camada">
+            <b>Operacional, tempo real</b>
+            <div class="fluxo">
+              <div class="caixa"><b>App / WhatsApp</b></div><span class="seta">→</span>
+              <div class="caixa"><b>Cloud Run</b><span>FastAPI + LangGraph</span></div><span class="seta">→</span>
+              <div class="caixa"><b>Cloud SQL / AlloyDB</b><span>pedido, estoque, checkpoint</span></div>
+              <div class="caixa"><b>Vertex AI</b><span>Gemini + DLP</span></div>
+            </div>
+          </div>
+          <div class="camada">
+            <b>Ingestão</b>
+            <div class="fluxo">
+              <div class="caixa"><b>Datastream</b><span>CDC do Postgres</span></div>
+              <div class="caixa"><b>Pub/Sub</b><span>eventos do grafo, subscription BigQuery</span></div>
+            </div>
+          </div>
+          <div class="camada">
+            <b>BigQuery</b>
+            <div class="fluxo">
+              <div class="caixa"><b>raw</b><span>espelho CDC e logs</span></div><span class="seta">→</span>
+              <div class="caixa"><b>trusted</b><span>pedidos, margem, interações</span></div><span class="seta">→</span>
+              <div class="caixa"><b>refined</b><span>funil, custo, qualidade</span></div>
+              <div class="caixa"><b>Vector Search</b><span>catálogo de todos os ciclos</span></div>
+            </div>
+          </div>
+        </div>
+        <p class="olho">O agente não consulta o BigQuery no caminho da frase. O BigQuery alimenta o catálogo, a avaliação e a análise.</p>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>A consulta analítica tem latência de segundos e cobra os bytes lidos. Apontar a tool de estoque para o BigQuery “porque o dado já está lá” troca o dado operacional pela cópia.</p>
+        <p>O Datastream faz CDC por replicação lógica para o raw. Cada passo do grafo vira um evento no Pub/Sub, gravado direto no BigQuery por uma subscription. O Langfuse mostra uma conversa. Este funil é o da squad, em volume.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo">
+        <span class="tempo">37–39 min</span>
+        <h3>System design: tecnologias do BigQuery</h3>
+        <table>
+          <thead><tr><th>Tecnologia</th><th>Uso neste agente</th></tr></thead>
+          <tbody>
+            <tr><td><b>Vector Search</b> (<code>VECTOR_SEARCH</code>, índice vetorial)</td><td>Catálogo de muitos ciclos e marcas. Um job reindexa a cada ciclo e publica o recorte vigente para a busca online.</td></tr>
+            <tr><td><b>BigQuery ML</b> (<code>ML.GENERATE_EMBEDDING</code>)</td><td>Gera os embeddings do catálogo em lote, em SQL, com modelo do Vertex AI.</td></tr>
+            <tr><td><b>Gemini no BigQuery</b> (<code>AI.GENERATE</code> / <code>ML.GENERATE_TEXT</code>)</td><td>LLM como juiz, em lote: a resposta usou os dados? Vazou PII? Recusou certo?</td></tr>
+            <tr><td><b>Continuous Queries</b></td><td>Alerta quase em tempo real para picos de bloqueio, tentativa de prompt injection ou queda de qualidade.</td></tr>
+            <tr><td><b>Particionamento e clustering</b></td><td>Logs particionados por data e clusterizados por <code>id_revendedora</code> e <code>intencao</code>. Métricas com prefixo <code>qt_</code> (<code>qt_tokens</code>, <code>qt_bloqueios</code>).</td></tr>
+            <tr><td><b>Row-level security e policy tags</b></td><td>Prompt e resposta em dataset sensível. Cada time vê só a própria linha, e as colunas de PII ficam mascaradas.</td></tr>
+            <tr><td><b>BI Engine e Looker</b></td><td>Painel do funil de intenções, latência, custo por conversa e taxa de recusa.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>Com 500 mil revendedoras, o problema deixa de ser responder e passa a ser saber se a resposta está certa. O BigQuery é onde isso se mede: o log de cada passo, o juiz em lote com Gemini e o painel.</p>
+        <p>O catálogo de um ciclo cabe no pgvector. O acervo histórico, de muitas marcas, vai para o Vector Search do BigQuery. A função <code>buscar_catalogo</code> troca de implementação, e o grafo fica igual.</p>
+      </aside>
+    </section>
+
+    <section class="slide">
+      <div class="corpo capa">
+        <span class="tempo">39–40 min</span>
+        <h1>O modelo classifica e redige.<br>O código decide o resto.</h1>
+        <p>O repositório é público. O README tem como subir o ambiente, as decisões e o relatório de vibe coding. As oito falas estão em <code>docs/roteiro-demo.md</code>.</p>
+      </div>
+      <aside class="notas">
+        <h2>Fala</h2>
+        <p>Eu fecho com a ideia central: com o grafo explícito, trocar o 7B pelo Gemini, o pgvector pelo Vector Search ou o Streamlit pelo WhatsApp não muda o fluxo. Abro para perguntas.</p>
+      </aside>
+    </section>
+
+
+  </main>
+
+  <div id="zoom"><img alt=""></div>
+
+  <footer>
+    <button type="button" id="anterior" class="secundario">Anterior</button>
+    <button type="button" id="proxima">Próxima</button>
+    <span>Setas do teclado. N esconde a fala. Clique na imagem para ampliar.</span>
+    <span class="contador" id="contador"></span>
+  </footer>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const tempos = slides.map((slide) => slide.querySelector(".tempo").textContent);
+    let indice = 0;
+
+    function mostrar(novo) {
+      indice = Math.max(0, Math.min(slides.length - 1, novo));
+      slides.forEach((slide, i) => slide.classList.toggle("ativa", i === indice));
+      document.getElementById("contador").textContent = (indice + 1) + " / " + slides.length;
+      document.getElementById("tempo").textContent = tempos[indice];
+      document.getElementById("anterior").disabled = indice === 0;
+      document.getElementById("proxima").disabled = indice === slides.length - 1;
+    }
+
+    document.getElementById("anterior").addEventListener("click", () => mostrar(indice - 1));
+    document.getElementById("proxima").addEventListener("click", () => mostrar(indice + 1));
+    document.getElementById("notas").addEventListener("click", () => {
+      document.body.classList.toggle("sem-notas");
+      const escondida = document.body.classList.contains("sem-notas");
+      document.getElementById("notas").textContent = escondida ? "Mostrar a fala" : "Esconder a fala";
+    });
+
+    const zoom = document.getElementById("zoom");
+    document.querySelectorAll(".figura img").forEach((img) => {
+      img.addEventListener("click", () => {
+        zoom.querySelector("img").src = img.src;
+        zoom.classList.add("aberto");
+      });
+    });
+    zoom.addEventListener("click", () => zoom.classList.remove("aberto"));
+
+    document.addEventListener("keydown", (evento) => {
+      if (zoom.classList.contains("aberto")) {
+        if (evento.key === "Escape") zoom.classList.remove("aberto");
+        return;
+      }
+      if (evento.key === "ArrowRight" || evento.key === "PageDown") mostrar(indice + 1);
+      if (evento.key === "ArrowLeft" || evento.key === "PageUp") mostrar(indice - 1);
+      if (evento.key === "n" || evento.key === "N") document.getElementById("notas").click();
+    });
+
+    mostrar(0);
+  </script>
+</body>
+</html>

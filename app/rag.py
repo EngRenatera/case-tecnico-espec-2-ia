@@ -18,6 +18,8 @@ from pathlib import Path
 import psycopg
 from pypdf import PdfReader
 
+from app.observabilidade import observar_busca
+
 ROOT = Path(__file__).resolve().parents[1]
 PDF_PATH = ROOT / "catalogo" / "ciclo-15.pdf"
 CHUNK_SIZE = 800
@@ -152,18 +154,21 @@ def ingerir(pdf_path: Path = PDF_PATH) -> int:
 
 def buscar_catalogo(pergunta: str, k: int = 4) -> list[str]:
     """Devolve os k pedaços do catálogo mais próximos da pergunta."""
-    vetor = embed([pergunta])[0]
-    with psycopg.connect(DATABASE_URL) as conn:
-        linhas = conn.execute(
-            """
-            SELECT des_conteudo
-            FROM catalogo_chunk
-            ORDER BY embedding <=> %s::vector
-            LIMIT %s
-            """,
-            (_vetor_sql(vetor), k),
-        ).fetchall()
-    return [linha[0] for linha in linhas]
+    with observar_busca(pergunta) as concluir:
+        vetor = embed([pergunta])[0]
+        with psycopg.connect(DATABASE_URL) as conn:
+            linhas = conn.execute(
+                """
+                SELECT des_conteudo
+                FROM catalogo_chunk
+                ORDER BY embedding <=> %s::vector
+                LIMIT %s
+                """,
+                (_vetor_sql(vetor), k),
+            ).fetchall()
+        trechos = [linha[0] for linha in linhas]
+        concluir(qt_trechos=len(trechos))
+        return trechos
 
 
 def main(argv: list[str] | None = None) -> None:

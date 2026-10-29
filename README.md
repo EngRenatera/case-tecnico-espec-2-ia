@@ -61,6 +61,22 @@ O Postgres e o Ollama precisam estar no ar. O teste do catálogo chama o modelo 
 uv run pytest -q
 ```
 
+O pytest tira `LANGFUSE_PUBLIC_KEY` e `LANGFUSE_SECRET_KEY` do ambiente. A suíte não abre trace.
+
+## Observabilidade
+
+Opcional. As chaves ligam o envio ao Langfuse. Sem elas, a API responde e não abre cliente.
+
+No [Langfuse Cloud](https://cloud.langfuse.com), crie um projeto e grave as chaves no `.env` da raiz, ou exporte no mesmo terminal do `uvicorn`. A API lê o `.env` na subida. O pytest ignora esse arquivo.
+
+```bash
+export LANGFUSE_PUBLIC_KEY=pk-lf-...
+export LANGFUSE_SECRET_KEY=sk-lf-...
+export LANGFUSE_BASE_URL=https://cloud.langfuse.com
+```
+
+Cada pergunta vira um trace `assistente`. A sessão do checkpoint agrupa a conversa, e o usuário é o `id_revendedora`. Dá para ver os nós do grafo, as duas chamadas ao Ollama, a intenção que o modelo devolveu e a que o código usou, a ferramenta (margem, estoque, pedido em foco ou último pedido), quantos trechos o catálogo devolveu e se a máscara mudou a frase. O vetor do embedding fica de fora. CPF, e-mail e telefone passam pela mesma máscara da saída antes da exportação. Uma falha do Langfuse não derruba a resposta.
+
 ## Decisões
 
 | Decisão | Registro |
@@ -69,6 +85,7 @@ uv run pytest -q
 | Vetores no mesmo Postgres dos pedidos | [docs/adr/0002-pgvector-no-mesmo-postgres.md](docs/adr/0002-pgvector-no-mesmo-postgres.md) |
 | Roteador explícito, sem loop ReAct | [docs/adr/0003-roteador-explicito.md](docs/adr/0003-roteador-explicito.md) |
 | Mascarar a frase inteira antes do SSE | [docs/adr/0004-mascarar-antes-do-sse.md](docs/adr/0004-mascarar-antes-do-sse.md) |
+| Trace por mensagem no Langfuse, fora do compose | [docs/adr/0005-langfuse-por-mensagem.md](docs/adr/0005-langfuse-por-mensagem.md) |
 
 O glossário do domínio está em [CONTEXT.md](CONTEXT.md). O plano de construção está em [docs/PLANO.md](docs/PLANO.md).
 
@@ -84,7 +101,7 @@ O banco operacional é Cloud SQL for PostgreSQL, com pgvector, e um pool (PgBoun
 
 A tool não consulta o BigQuery. Consulta analítica tem latência de segundos e cobra os bytes lidos. O chat precisa de uma linha por chave primária. O lake fica fora do caminho da resposta.
 
-O Datastream faz CDC do Postgres, por replicação lógica, para um dataset bruto no BigQuery. A squad de dados lê pedidos, margens agregadas e o funil de intenções. O agente não lê esse dataset.
+O Datastream faz CDC do Postgres, por replicação lógica, para um dataset bruto no BigQuery. A squad de dados lê pedidos, margens agregadas e o funil de intenções. O agente não lê esse dataset. O Langfuse, quando as chaves estão presentes, observa latência, intenção e ferramentas no caminho da resposta. O funil da squad continua saindo do Postgres.
 
 O modelo troca o cliente Ollama pelo cliente Vertex AI (Gemini). As intenções e o grafo permanecem. Os embeddings podem ir para o modelo de embedding do Vertex. A dimensão do vetor muda, e os chunks são reindexados.
 

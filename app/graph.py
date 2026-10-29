@@ -26,6 +26,7 @@ from pydantic import BaseModel, ValidationError
 from typing_extensions import TypedDict
 
 from app.guardrails import entrada_bloqueada, margem_da_sessao, mascarar_saida
+from app.observabilidade import anotar_ferramenta, anotar_mascara, anotar_roteamento, tracar_mensagem
 from app.rag import buscar_catalogo
 from app.tools import DATABASE_URL, consultar_estoque, consultar_minha_margem, consultar_pedidos
 
@@ -159,14 +160,17 @@ def criar_grafo(
     def rotear(state: Estado) -> dict:
         mensagem = _ultima_mensagem(state)
         intencao: Intencao = "conversa"
+        intencao_modelo = "invalida"
         for tentativa in range(2):
             complemento = "" if tentativa == 0 else "\nResponda apenas o JSON."
             try:
-                intencao = interpretar_intencao(classificar(mensagem + complemento))
+                intencao_modelo = interpretar_intencao(classificar(mensagem + complemento))
+                intencao = intencao_modelo
                 break
             except (ValidationError, ValueError, json.JSONDecodeError):
                 continue
         intencao = ajustar_intencao(intencao, mensagem)
+        anotar_roteamento(intencao_modelo, intencao)
         return {
             "intencao": intencao,
             "trechos_catalogo": [],
@@ -192,6 +196,7 @@ def criar_grafo(
             linhas = consultar_pedidos(id_revendedora=id_revendedora)
             if linhas:
                 foco = linhas[0]["id_pedido"]
+        anotar_ferramenta(escolha, len(linhas))
         return {"linhas_transacionais": linhas, "id_pedido_em_foco": foco}
 
     def no_redigir(state: Estado) -> dict:
@@ -202,7 +207,9 @@ def criar_grafo(
         return {"resposta": RECUSA}
 
     def no_mascarar(state: Estado) -> dict:
-        limpa = mascarar_saida(state.get("resposta", ""))
+        bruta = state.get("resposta", "")
+        limpa = mascarar_saida(bruta)
+        anotar_mascara(limpa != bruta)
         return {"resposta": limpa, "messages": [AIMessage(content=limpa)]}
 
     def depois_do_filtro(state: Estado) -> str:
@@ -292,16 +299,22 @@ def redigir_ollama(mensagem: str, contexto: str) -> str:
 
 
 def invocar(grafo, *, id_revendedora: int, id_sessao: str, mensagem: str) -> dict:
-    config = {"configurable": {"thread_id": id_sessao}}
-    grafo.invoke(
-        {
-            "messages": [HumanMessage(content=mensagem)],
-            "id_revendedora": id_revendedora,
-            "id_sessao": id_sessao,
-        },
-        config,
-    )
-    return grafo.get_state(config).values
+    with tracar_mensagem(
+        id_revendedora=id_revendedora,
+        id_sessao=id_sessao,
+        mensagem=mensagem,
+    ) as rastreio:
+        grafo.invoke(
+            {
+                "messages": [HumanMessage(content=mensagem)],
+                "id_revendedora": id_revendedora,
+                "id_sessao": id_sessao,
+            },
+            rastreio.config,
+        )
+        estado = grafo.get_state({"configurable": {"thread_id": id_sessao}}).values
+        rastreio.resposta = estado.get("resposta", "")
+    return estado
 
 
 @contextmanager

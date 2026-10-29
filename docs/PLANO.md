@@ -4,7 +4,7 @@ Guia de construção do case de Especialista II de Engenharia de IA. O público 
 
 Uma fase por vez. O critério de saída é o bloco **Validar**. A fase seguinte começa depois que aquele resultado aparece na sua máquina.
 
-Estimativa: cerca de 19 horas, ao longo de uma semana. Observabilidade fica fora desta lista. A decisão sobre ela acontece depois da fase 8.
+Estimativa: cerca de 19 horas, ao longo de uma semana. Observabilidade ficou para depois da fase 8 e entrou com Langfuse, fora do compose. A decisão está em [docs/adr/0005-langfuse-por-mensagem.md](adr/0005-langfuse-por-mensagem.md).
 
 ## O que o case pede e onde isso mora
 
@@ -20,7 +20,7 @@ Estimativa: cerca de 19 horas, ao longo de uma semana. Observabilidade fica fora
 | Frontend de chat | Fase 7, Streamlit |
 | README com arquitetura, como rodar e relatório de vibe coding | Fase 8 |
 | System design para 500 mil revendedoras e BigQuery | Fase 8, só narrativa. Sem deploy e sem Datastream |
-| Tracing (Langfuse, Phoenix, Datadog) | Decidir depois da fase 8 |
+| Tracing com Langfuse | Depois da fase 8. [ADR 0005](adr/0005-langfuse-por-mensagem.md). Fora do compose |
 
 Glossário do domínio: [CONTEXT.md](../CONTEXT.md). Decisões de arquitetura: [docs/adr/](adr/).
 
@@ -53,6 +53,8 @@ flowchart LR
   PG --- DM[pedidos, estoque, margem]
   PG --- VX[chunks do catálogo]
 ```
+
+Com `LANGFUSE_PUBLIC_KEY` e `LANGFUSE_SECRET_KEY`, cada mensagem também abre um trace no Langfuse. O compose não sobe esse serviço.
 
 O modelo e o embedding são intercambiáveis por variável de ambiente. Na narrativa da fase 8, o mesmo grafo aponta para o Gemini no Vertex AI. O código do MVP não cria projeto GCP.
 
@@ -422,7 +424,7 @@ Falar na apresentação, com um desenho no slide:
 - WhatsApp ou app nativo. O Streamlit simula o canal.
 - Loop em que o modelo escolhe sozinho uma sequência de tools.
 - Streaming token a token antes da máscara.
-- Observabilidade com Phoenix, Langfuse ou Cloud Trace. Retomar esta decisão só depois da fase 8, se ainda houver tempo antes da entrega.
+- Observabilidade com Phoenix ou Cloud Trace. O Langfuse entrou depois da fase 8, fora do compose. Ver [ADR 0005](adr/0005-langfuse-por-mensagem.md).
 
 ## Ordem e tempo
 
