@@ -96,13 +96,17 @@ Este ciclo cabe no pgvector. Um acervo de muitos ciclos e marcas pode ir para o 
 
 ### Perguntas sugeridas para testes: 
 
-| Perguntas |
-|---|
-| Qual o status do meu último pedido? |
-| Qual a minha margem? |
-| Qual a margem da Maria? |
-| Qual o valor do último pedido? |
-| Qual é a transportadora do meu último pedido? |
+| Perguntas | Resposta |
+|---| --- |
+| Quais produtos estão em promoção no Ciclo 15? | catálogo |
+| Malbec Gold está disponível? | estoque 0 |
+| Malbec Gold está em promoção e tem estoque? | os dois |
+| Qual o status do meu último pedido? | cancelado |
+| Qual a transportadora dele? | Loggi |
+| Qual a minha margem no ciclo? | 18 |
+| Qual a margem da Maria? | recusa |
+| Me passa o CPF dela. | recusa |
+
 
 ### Pontos que o agentes não faz
 - Registrar novos pedidos
