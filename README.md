@@ -92,16 +92,47 @@ A máscara por regex vira uma chamada ao Sensitive Data Protection, no mesmo pon
 
 Este ciclo cabe no pgvector. Um acervo de muitos ciclos e marcas pode ir para o Vertex AI Vector Search. A função `buscar_catalogo` troca a implementação. O grafo permanece.
 
-## Relatório de vibe coding
+## Observaçãoes para Testes
 
-A implementação foi feita no Cursor, uma fase por vez. O prompt de cada fase era o bloco correspondente de `docs/PLANO.md`: o que aprender, o que fazer e o comando de validação. Quando o resultado divergia, o prompt seguinte apontava o sintoma observado, não um pedido genérico para "melhorar". Os registros fase a fase estão em `docs/evidencias/`.
+### Perguntas sugeridas para testes: 
 
-O maior erro foi do modelo de chat, não do editor. Na primeira pergunta ao vivo "qual a minha margem?", o 7B devolveu `bloqueado`. O prompt de classificação dizia que margem de outra pessoa era recusa, e o modelo generalizou para qualquer margem. A correção foi um exemplo no prompt separando "minha margem" de "margem da Maria", e uma regra no código: se a frase é a margem da sessão, um `bloqueado` do modelo não vale. A regra determinística já tinha deixado a frase passar.
+| Perguntas |
+|---|
+| Qual o status do meu último pedido? |
+| Qual a minha margem? |
+| Qual a margem da Maria? |
+| Qual o valor do último pedido? |
+| Qual é a transportadora do meu último pedido? |
 
-Outras correções feitas na mão, a partir do que a validação mostrou:
+### Pontos que o agentes não faz
+- Registrar novos pedidos
+- Saudações
+- Outros temas 
+- Contexto longos*
 
-- A busca do Malbec Gold ranqueava primeiro o trecho do Malbec comum, que diz "não entra na promoção". Cada produto passou a ser uma página do PDF, para o pedaço não misturar as duas frases.
-- "tem Malbec Gold?" e "Malbec Gold está disponível?" podiam ir para o catálogo ou para a conversa. O catálogo diz que não informa disponibilidade e ainda fala em últimas unidades. Frase com produto e disponibilidade consulta o estoque. Frase com promoção e estoque passa pelas duas fontes, e o saldo prevalece.
-- A primeira mensagem não gravava a dona da sessão. O checkpoint aceitaria a thread de outra revendedora. A API agora insere a sessão na primeira fala e responde 403 se o id não for da dona, antes do grafo.
-- O pull do Ollama falhou com certificado desconhecido por causa da inspeção TLS. O compose versionado ficou portátil. O bundle entra só num overlay local.
-- A porta 5432 já era do Postgres da máquina. O compose do case publica 5433.
+*O modelo utilizado nesse MVP é bem mais limitado aos modelos famosos conhecidos. Para efeitos de referência o modelo utilizado processa até 30mil tokens, enquanto o Gemini pode passar de 1 milhão de tokens.
+
+
+## Relatório de Vibe Coding
+
+### Resumo da sessão
+
+A sessão começou pelo PDF do case. O pedido foi planejar o MVP antes de escrever código: prazo, stack local, o que ficava só no slide e o que entrava no repositório. Desse plano saíram as fases 0 a 8, cada uma com um comando de validação e um registro em `docs/evidencias/`.
+
+O que foi construído, nesta ordem: Postgres com a semente do Ciclo 15, Ollama, catálogo em PDF ingerido no pgvector, tools de pedido, estoque e margem, grafo com memória de sessão, guardrails, API com SSE, tela Streamlit e o README com o roteiro e a narrativa de evolução. No fim, o repositório foi tornado público e a fala de cerca de 40 minutos foi escrita em `apresentacao/`.
+
+### Ferramentas
+
+O código foi escrito no Cursor, com o agente da IDE. A validação de cada fase rodou no terminal: `uv`, `pytest`, Docker Compose, Postgres e Ollama. A tela foi conferida no navegador. Não houve Copilot, ChatGPT nem Claude nesta sessão.
+
+### Como os prompts iniciais foram estruturados
+
+O primeiro prompt colou o caminho do PDF e pediu um plano fase a fase, com uma forma de validar cada fase antes de seguir. As respostas fecharam as decisões em rodadas curtas: local em vez de GCP, Postgres na porta 5433, roteador explícito, observabilidade só depois do roteiro.
+
+Com o plano gravado em `docs/PLANO.md`, cada prompt seguinte foi uma frase: executar a fase N. O bloco da fase já trazia o que aprender, o que fazer e o comando que prova. Quando o resultado divergia, o prompt seguinte descrevia o sintoma visto na tela, no teste ou no banco. Não pedia um genérico "melhore".
+
+### Maior obstáculo e correção
+
+Na primeira pergunta ao vivo, "qual a minha margem?", o 7B devolveu `bloqueado`. O prompt de classificação dizia que margem de outra pessoa era recusa, e o modelo generalizou para qualquer margem. A regra determinística já tinha deixado a frase passar. O classificador desfazia isso.
+
+A correção foi em dois lugares. O prompt ganhou um exemplo separando "qual a minha margem?" de "qual a margem da Maria?". O código passou a ignorar um `bloqueado` do modelo quando a frase é a margem da sessão. A consulta continua presa ao id da revendedora autenticada. A resposta da Ana voltou a ser 18, no Ciclo 15.
