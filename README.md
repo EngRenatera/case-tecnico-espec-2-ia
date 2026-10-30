@@ -151,7 +151,7 @@ O código foi escrito no Cursor, com o agente da IDE. A validação de cada fase
 
 O primeiro prompt colou o caminho do PDF e pediu um plano fase a fase, com uma forma de validar cada fase antes de seguir. As respostas fecharam as decisões em rodadas curtas: local em vez de GCP, Postgres na porta 5433, roteador explícito, observabilidade só depois do roteiro.
 
-Com o plano gravado em `docs/PLANO.md`, cada prompt seguinte foi uma frase: executar a fase N. O bloco da fase já trazia o que aprender, o que fazer e o comando que prova. Quando o resultado divergia, o prompt seguinte descrevia o sintoma visto na tela, no teste ou no banco. Não pedia um genérico "melhore".
+Com o plano gravado em `docs/PLANO.md`, cada prompt seguinte foi uma frase: executar a fase N. O bloco da fase já trazia o que aprender, o que fazer e o comando que prova. Quando o resultado divergia, o prompt seguinte descrevia o sintoma visto na tela, no teste ou no banco.
 
 ### Maior obstáculo e correção
 
