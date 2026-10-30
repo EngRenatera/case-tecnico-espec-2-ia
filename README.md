@@ -138,7 +138,8 @@ Este ciclo cabe no pgvector. Um acervo de muitos ciclos e marcas pode ir para o 
 
 ### Resumo da sessão
 
-A sessão começou pelo PDF do case. O pedido foi planejar o MVP antes de escrever código: prazo, stack local, o que ficava só no slide e o que entrava no repositório. Desse plano saíram as fases 0 a 8, cada uma com um comando de validação e um registro em `docs/evidencias/`.
+O primeiro passo é sempre especificar da melhor forma possível. Gasta-se mais tempo especificando e planejando do que executando. Nessa etapa foi utilizada a skill /grill-me, onde sou sou 'entrevistado' pela IA. Os questionamento são essenciais para preencher os GAP do projeto e retirar as ambiguidades. 
+Desse plano saíram as fases 0 a 8, cada uma com um comando de validação e um registro em `docs/evidencias/`. A fases são executadas uma de casa vez, com validação humana no final de cada uma.
 
 O que foi construído, nesta ordem: Postgres com a semente do Ciclo 15, Ollama, catálogo em PDF ingerido no pgvector, tools de pedido, estoque e margem, grafo com memória de sessão, guardrails, API com SSE, tela Streamlit e o README com o roteiro e a narrativa de evolução. No fim, o repositório foi tornado público e a fala de cerca de 40 minutos foi escrita em `apresentacao/`.
 
